@@ -14,8 +14,29 @@ import torch
 import argparse
 import os
 
+from dataset.polyps_dataloader import *
+from dataset.dataloader import *
 
-def main(hp, num_epochs, resume, name):
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname( __file__ )))
+DATA_DIR = os.path.join(ROOT_DIR, 'new_data/Kvasir-SEG')
+
+
+TRAIN_DIR = os.path.join(DATA_DIR, 'train')
+VAL_DIR = os.path.join(DATA_DIR, 'valid')
+TEST_DIR = os.path.join(DATA_DIR, 'test')
+
+TRAIN_IMGS_DIR = os.path.join(TRAIN_DIR, 'images')
+VAL_IMGS_DIR = os.path.join(VAL_DIR, 'images')
+TEST_IMGS_DIR = os.path.join(TEST_DIR, 'images')
+
+TRAIN_LABELS_DIR = os.path.join(TRAIN_DIR, 'masks')
+VAL_LABELS_DIR = os.path.join(VAL_DIR, 'masks')
+TEST_LABELS_DIR = os.path.join(TEST_DIR, 'masks')
+
+
+
+def main(hp, num_epochs, resume, name, device='cpu'):
 
     checkpoint_dir = "{}/{}".format(hp.checkpoints, name)
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -25,9 +46,9 @@ def main(hp, num_epochs, resume, name):
     # get model
 
     if hp.RESNET_PLUS_PLUS:
-        model = ResUnetPlusPlus(3).cuda()
+        model = ResUnetPlusPlus(3).to(device)
     else:
-        model = ResUnet(3, 64).cuda()
+        model = ResUnet(3, 64).to(device)
 
     # set up binary cross entropy and dice loss
     criterion = metrics.BCEDiceLoss()
@@ -63,21 +84,37 @@ def main(hp, num_epochs, resume, name):
             print("=> no checkpoint found at '{}'".format(args.resume))
 
     # get data
-    mass_dataset_train = dataloader.ImageDataset(
-        hp, transform=transforms.Compose([dataloader.ToTensorTarget()])
-    )
+    # mass_dataset_train = dataloader.ImageDataset(
+    #     hp, transform=transforms.Compose([dataloader.ToTensorTarget()])
+    # )
 
-    mass_dataset_val = dataloader.ImageDataset(
-        hp, False, transform=transforms.Compose([dataloader.ToTensorTarget()])
-    )
+    # mass_dataset_val = dataloader.ImageDataset(
+    #     hp, False, transform=transforms.Compose([dataloader.ToTensorTarget()])
+    # )
+
+    train_transform = transforms.Compose([
+        # RandomCrop((300, 300), (256, 256)),
+        # Resize((256, 256)),
+        # GrayscaleNormalization(mean=0.5, std=0.5),
+        # HorizontalFlip(),
+        # BrightnessAugment(),
+        ToTensorTarget(),
+    ])
+
+    val_transform = transforms.Compose([
+        # Resize((256, 256)),
+        # GrayscaleNormalization(mean=0.5, std=0.5),
+        ToTensorTarget(),
+    ])
+
+    
+    train_dataset = PolypsDataset(TRAIN_IMGS_DIR, TRAIN_LABELS_DIR, transform=train_transform)
+    val_dataset = PolypsDataset(VAL_IMGS_DIR, VAL_LABELS_DIR, transform=val_transform)
+
 
     # creating loaders
-    train_dataloader = DataLoader(
-        mass_dataset_train, batch_size=hp.batch_size, num_workers=2, shuffle=True
-    )
-    val_dataloader = DataLoader(
-        mass_dataset_val, batch_size=1, num_workers=2, shuffle=False
-    )
+    train_dataloader = DataLoader(train_dataset, batch_size=hp.batch_size, num_workers=2, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=hp.batch_size, num_workers=2, shuffle=False)
 
     step = 0
     for epoch in range(start_epoch, num_epochs):
@@ -97,8 +134,8 @@ def main(hp, num_epochs, resume, name):
         for idx, data in enumerate(loader):
 
             # get the inputs and wrap in Variable
-            inputs = data["sat_img"].cuda()
-            labels = data["map_img"].cuda()
+            inputs = data["img"].to(device)
+            labels = data["mask"].to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -119,18 +156,18 @@ def main(hp, num_epochs, resume, name):
             train_loss.update(loss.data.item(), outputs.size(0))
 
             # tensorboard logging
-            if step % hp.logging_step == 0:
-                writer.log_training(train_loss.avg, train_acc.avg, step)
-                loader.set_description(
-                    "Training Loss: {:.4f} Acc: {:.4f}".format(
-                        train_loss.avg, train_acc.avg
-                    )
-                )
+            # if step % hp.logging_step == 0:
+            #     writer.log_training(train_loss.avg, train_acc.avg, step)
+            #     loader.set_description(
+            #         "Training Loss: {:.4f} Acc: {:.4f}".format(
+            #             train_loss.avg, train_acc.avg
+            #         )
+            #     )
 
             # Validatiuon
             if step % hp.validation_interval == 0:
                 valid_metrics = validation(
-                    val_dataloader, model, criterion, writer, step
+                    val_dataloader, model, criterion, writer, step, device
                 )
                 save_path = os.path.join(
                     checkpoint_dir, "%s_checkpoint_%04d.pt" % (name, step)
@@ -153,7 +190,7 @@ def main(hp, num_epochs, resume, name):
             step += 1
 
 
-def validation(valid_loader, model, criterion, logger, step):
+def validation(valid_loader, model, criterion, logger, step, device='cpu'):
 
     # logging accuracy and loss
     valid_acc = metrics.MetricTracker()
@@ -166,8 +203,8 @@ def validation(valid_loader, model, criterion, logger, step):
     for idx, data in enumerate(tqdm(valid_loader, desc="validation")):
 
         # get the inputs and wrap in Variable
-        inputs = data["sat_img"].cuda()
-        labels = data["map_img"].cuda()
+        inputs = data["img"].to(device)
+        labels = data["mask"].to(device)
 
         # forward
         # prob_map = model(inputs) # last activation was a sigmoid
@@ -179,9 +216,9 @@ def validation(valid_loader, model, criterion, logger, step):
 
         valid_acc.update(metrics.dice_coeff(outputs, labels), outputs.size(0))
         valid_loss.update(loss.data.item(), outputs.size(0))
-        if idx == 0:
-            logger.log_images(inputs.cpu(), labels.cpu(), outputs.cpu(), step)
-    logger.log_validation(valid_loss.avg, valid_acc.avg, step)
+    #     if idx == 0:
+    #         logger.log_images(inputs.cpu(), labels.cpu(), outputs.cpu(), step)
+    # logger.log_validation(valid_loss.avg, valid_acc.avg, step)
 
     print("Validation Loss: {:.4f} Acc: {:.4f}".format(valid_loss.avg, valid_acc.avg))
     model.train()
@@ -208,6 +245,7 @@ if __name__ == "__main__":
         help="path to latest checkpoint (default: none)",
     )
     parser.add_argument("--name", default="default", type=str, help="Experiment name")
+    parser.add_argument("--device", type=str, default="cuda:3" if torch.cuda.is_available() else "cpu", help="Device to use for training")
 
     args = parser.parse_args()
 
@@ -215,4 +253,17 @@ if __name__ == "__main__":
     with open(args.config, "r") as f:
         hp_str = "".join(f.readlines())
 
-    main(hp, num_epochs=args.epochs, resume=args.resume, name=args.name)
+    main(hp, num_epochs=args.epochs, resume=args.resume, name=args.name, device=args.device)
+
+
+
+'''
+python train.py --name "default" --config "configs/polyps.yaml" --epochs 100 
+'''
+
+
+'''
+    IMAGE SIZE : [3, 256, 256]
+    MASK SIZE  : [1, 256, 256]
+
+'''
