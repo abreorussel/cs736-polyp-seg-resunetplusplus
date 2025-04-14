@@ -1,5 +1,10 @@
-# Deep ResUnet and ResUnet ++ (Not Maintained)
-Unofficial Pytorch implementation of following papers :
+# Polyp Segmentation 
+Team Members
+* Russel Abreo
+* Atharv Shingewar
+
+
+<!-- Unofficial Pytorch implementation of following papers :
 * [Deep ResUnet](https://arxiv.org/pdf/1711.10684.pdf)
 * [ResUnet ++](https://arxiv.org/pdf/1911.07067.pdf)
 
@@ -34,4 +39,4 @@ For Tensorboard:
 - [Squeeze-and-Excitation Networks](https://arxiv.org/pdf/1709.01507.pdf)
 - [ResUNet++](https://arxiv.org/pdf/1911.07067.pdf)
 - [Unet](https://arxiv.org/pdf/1505.04597.pdf)
-- [Brain tumor segmentation](https://github.com/galprz/brain-tumor-segmentation)
+- [Brain tumor segmentation](https://github.com/galprz/brain-tumor-segmentation) -->
