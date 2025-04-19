@@ -7,6 +7,7 @@ import cv2
 import torch
 import random
 import glob
+import matplotlib.pyplot as plt
 
 from skimage import io
 from utils.polyps_augmentation import *
@@ -23,25 +24,58 @@ class PolypsDataset(Dataset):
 
     def __getitem__(self, idx):
         # print(self.imgs[idx])
-        image = cv2.imread(self.imgs[idx], cv2.IMREAD_COLOR)
-        mask = cv2.imread(self.masks[idx], cv2.IMREAD_GRAYSCALE)
-        # image = io.imread(self.imgs[idx])
-        # mask = io.imread(self.masks[idx])
+        # image = cv2.imread(self.imgs[idx], cv2.IMREAD_COLOR)
+        # mask = cv2.imread(self.masks[idx], cv2.IMREAD_GRAYSCALE)
+
         # sample = {
-        #     "img" : image,
-        #     "mask" : mask[:, :, np.newaxis]
+        #     "image" : image,
+        #     "mask" : mask
         # }
+
+        image = cv2.imread(self.imgs[idx], cv2.IMREAD_COLOR)
+        mask = cv2.imread(self.masks[idx], cv2.IMREAD_GRAYSCALE) / 255.
+        
         sample = {
-            "img" : image,
-            "mask" : mask
+            'image': image,
+            'mask': mask[:, :, np.newaxis],
         }
         
         if self.transform is not None:
             sample = self.transform(sample)
-        
-        # print(f"POLYPS DATASET : IMAGE : {sample['img'].shape}  ,   MASK : {sample['mask'].shape}")
+
+        # print(f"POLYPS DATASET : IMAGE : {sample['image'].shape}  ,   MASK : {sample['mask'].shape}")
         return sample
         
+
+class JointTrTransform:
+    def __init__(self, train=True):
+        # define the *geometric* transforms you want to apply to both
+        if train:
+            self.transform = v2.Compose([
+                # v2.ToImage(),
+                v2.RandomResizedCrop(size=(256,256), scale=(0.8, 1.0)),
+                v2.RandomHorizontalFlip(p=0.5),
+                v2.RandomVerticalFlip(p=0.5),
+                v2.ToDtype(torch.float32, scale=True),
+            ])
+        else:
+            self.transform = v2.Compose([
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.ToDtype(torch.float32, scale=True),
+            ])
+
+        self.image_only = v2.Compose([
+            v2.ToImage(),
+            v2.Normalize([0.5], [0.5])
+        ])
+
+    def __call__(self, sample):
+        img, mask = sample["image"], sample["mask"]
+        img = self.image_only(img)
+        img = self.transform(img)
+        mask = self.transform(mask)
+        return {"image": img, "mask": mask}
 
 class GrayscaleNormalization:
     def __init__(self, mean=0.5, std=0.5):
@@ -49,10 +83,10 @@ class GrayscaleNormalization:
         self.std = std
         
     def __call__(self, data):
-        image, mask = data['img'], data['mask']
+        image, mask = data['image'], data['mask']
         image = (image - self.mean) / self.std
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         return sample
@@ -60,30 +94,47 @@ class GrayscaleNormalization:
 
 class ToTensor:
     def __call__(self, data):
-        img, mask = data['img'], data['mask']
+        image, mask = data['image'], data['mask']
 
-        # print(f"image : {img.shape} label : {mask.shape}")
+        # print(f"image : {image.shape} label : {mask.shape}")
         
-        img = img.transpose(2, 0, 1).astype(np.float32)  # torch 의 경우 (C, H, W)
+        image = image.transpose(2, 0, 1).astype(np.float32)  # torch 의 경우 (C, H, W)
         mask = mask.transpose(2, 0, 1).astype(np.float32)
         
         sample = {
-            'img': torch.from_numpy(img),
+            'image': torch.from_numpy(image),
             'mask': torch.from_numpy(mask),
         }
         return sample
-
+    
+class RandomFlip:
+    def __call__(self, data):
+        image, mask = data['image'], data['mask']
+        
+        if np.random.rand() > 0.5:
+            image = np.fliplr(image)
+            mask = np.fliplr(mask)
+            
+        if np.random.rand() > 0.5:
+            image = np.flipud(image)
+            mask = np.flipud(mask)
+            
+        ret = {
+            'image': image,
+            'mask': mask,
+        }
+        return ret
 
 class Resize:
     def __init__(self, size):
         self.size = size
 
     def __call__(self, data):
-        image, mask = data["img"], data["mask"]
+        image, mask = data["image"], data["mask"]
         image = cv2.resize(image, self.size)
         mask = cv2.resize(mask, self.size)
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         # print("RESIZE")
@@ -96,10 +147,10 @@ class RandomCrop:
         self.size = size
 
     def __call__(self, data):
-        image, mask = data["img"], data["mask"]
+        image, mask = data["image"], data["mask"]
         image, mask =  random_crop(image, mask, self.crop_size, self.size)
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         return sample
@@ -110,11 +161,11 @@ class HorizontalFlip:
         self.size = size
 
     def __call__(self, data):
-        image, mask = data["img"], data["mask"]
+        image, mask = data["image"], data["mask"]
         if random.random() < self.p:
             image, mask =  horizontal_flip(image, mask, self.size)
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         return sample
@@ -125,11 +176,11 @@ class VerticalFlip:
         self.size = size
 
     def __call__(self, data):
-        image, mask = data["img"], data["mask"]
+        image, mask = data["image"], data["mask"]
         if random.random() < self.p:
             image, mask =  vertical_flip(image, mask, self.size)
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         return sample
@@ -140,33 +191,32 @@ class RandomRotation:
         self.size = size
 
     def __call__(self, data):
-        image, mask = data["img"], data["mask"]
+        image, mask = data["image"], data["mask"]
         if random.random() < self.p:
             image, mask =  random_rotation(image, mask, self.size)
         sample = {
-            "img" : image,
+            "image" : image,
             "mask" : mask
         }
         return sample
 
-class BrightnessAugment:
-    def __init__(self, factor_range=(0.3, 0.9), size=(256, 256)):
-        self.factor_range = factor_range
-        self.size = size
-
-    def __call__(self, data):
-        image, mask = data["img"], data["mask"]
-        factor = random.uniform(*self.factor_range)
-        image, mask =  brightness_augment(image, mask, factor)
-        sample = {
-            "img" : image,
-            "mask" : mask
-        }
-        return sample
 
 
 def denormalization(data, mean, std):
     return (data * std) + mean
 
-    
+# class BrightnessAugment:
+#     def __init__(self, factor_range=(0.3, 0.9), size=(256, 256)):
+#         self.factor_range = factor_range
+#         self.size = size
+
+#     def __call__(self, data):
+#         image, mask = data["image"], data["mask"]
+#         factor = random.uniform(*self.factor_range)
+#         image, mask =  brightness_augment(image, mask, factor)
+#         sample = {
+#             "image" : image,
+#             "mask" : mask
+#         }
+#         return sample    
      

@@ -46,14 +46,14 @@ class ToTensorTarget(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        img, mask = sample["img"], sample["mask"]
+        image, mask = sample["image"], sample["mask"]
 
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
 
         return {
-            "img": transforms.functional.to_tensor(img).float(),
+            "image": transforms.functional.to_tensor(image).float(),
             "mask": torch.from_numpy(mask).unsqueeze(0).float().div(255),
         }  # unsqueeze for the channel dimension
 

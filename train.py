@@ -13,6 +13,7 @@ from utils.logger import MyWriter
 import torch
 import argparse
 import os
+from torchvision.transforms import v2
 
 from dataset.polyps_dataloader import *
 from dataset.dataloader import *
@@ -37,7 +38,6 @@ TEST_LABELS_DIR = os.path.join(TEST_DIR, 'masks')
 
 
 def main(hp, num_epochs, resume, name, device='cpu'):
-
     checkpoint_dir = "{}/{}".format(hp.checkpoints, name)
     os.makedirs(checkpoint_dir, exist_ok=True)
 
@@ -47,6 +47,7 @@ def main(hp, num_epochs, resume, name, device='cpu'):
 
     if hp.RESNET_PLUS_PLUS:
         model = ResUnetPlusPlus(3).to(device)
+        print("Loading RESUNET++ model !!!!!!!!!!!\n")
     else:
         model = ResUnet(3, 64).to(device)
 
@@ -59,7 +60,8 @@ def main(hp, num_epochs, resume, name, device='cpu'):
     optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr)
 
     # decay LR
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-6, verbose=True)
 
     # starting params
     best_loss = 999
@@ -92,20 +94,33 @@ def main(hp, num_epochs, resume, name, device='cpu'):
     #     hp, False, transform=transforms.Compose([dataloader.ToTensorTarget()])
     # )
 
+    # train_transform = v2.Compose([
+    #     v2.ToImage(),
+    #     v2.RandomResizedCrop(size=(256,256), scale=(0.8, 1.0)),
+    #     v2.RandomHorizontalFlip(p=0.5),
+    #     v2.RandomVerticalFlip(p=0.5),
+    #     v2.ToDtype(torch.float32, scale=True),
+    #     # ToTensorTarget(),
+    # ])
+
+    # val_transform = v2.Compose([
+    #     v2.ToImage(),
+    #     v2.ToDtype(torch.float32, scale=True),
+    # ])
+
     train_transform = transforms.Compose([
-        # RandomCrop((300, 300), (256, 256)),
-        # Resize((256, 256)),
-        # GrayscaleNormalization(mean=0.5, std=0.5),
-        # HorizontalFlip(),
-        # BrightnessAugment(),
-        ToTensorTarget(),
+        GrayscaleNormalization(mean=0.5, std=0.5),
+        # RandomFlip(),
+        ToTensor(),
+    ])
+    val_transform = transforms.Compose([
+        GrayscaleNormalization(mean=0.5, std=0.5),
+        ToTensor(),
     ])
 
-    val_transform = transforms.Compose([
-        # Resize((256, 256)),
-        # GrayscaleNormalization(mean=0.5, std=0.5),
-        ToTensorTarget(),
-    ])
+
+    # train_transform = JointTrTransform(train=True)
+    # val_transform = JointTrTransform(train=False)
 
     
     train_dataset = PolypsDataset(TRAIN_IMGS_DIR, TRAIN_LABELS_DIR, transform=train_transform)
@@ -122,7 +137,7 @@ def main(hp, num_epochs, resume, name, device='cpu'):
         print("-" * 10)
 
         # step the learning rate scheduler
-        lr_scheduler.step()
+        # lr_scheduler.step()
 
         # run training and validation
         # logging accuracy and loss
@@ -134,7 +149,7 @@ def main(hp, num_epochs, resume, name, device='cpu'):
         for idx, data in enumerate(loader):
 
             # get the inputs and wrap in Variable
-            inputs = data["img"].to(device)
+            inputs = data["image"].to(device)
             labels = data["mask"].to(device)
 
             # zero the parameter gradients
@@ -169,6 +184,7 @@ def main(hp, num_epochs, resume, name, device='cpu'):
                 valid_metrics = validation(
                     val_dataloader, model, criterion, writer, step, device
                 )
+                lr_scheduler.step(valid_metrics["valid_loss"])
                 save_path = os.path.join(
                     checkpoint_dir, "%s_checkpoint_%04d.pt" % (name, step)
                 )
@@ -203,7 +219,7 @@ def validation(valid_loader, model, criterion, logger, step, device='cpu'):
     for idx, data in enumerate(tqdm(valid_loader, desc="validation")):
 
         # get the inputs and wrap in Variable
-        inputs = data["img"].to(device)
+        inputs = data["image"].to(device)
         labels = data["mask"].to(device)
 
         # forward
@@ -245,7 +261,7 @@ if __name__ == "__main__":
         help="path to latest checkpoint (default: none)",
     )
     parser.add_argument("--name", default="default", type=str, help="Experiment name")
-    parser.add_argument("--device", type=str, default="cuda:3" if torch.cuda.is_available() else "cpu", help="Device to use for training")
+    parser.add_argument("--device", type=str, default="cuda:6" if torch.cuda.is_available() else "cpu", help="Device to use for training")
 
     args = parser.parse_args()
 

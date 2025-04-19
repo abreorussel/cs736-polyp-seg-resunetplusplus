@@ -276,80 +276,80 @@ if __name__ == '__main__':
             image = read_image(image_path)
             mask = read_image(mask_path, grayscale=True)
 
-            ## Augment
-            # image1, mask1 = center_crop(image, mask, crop_size, size)
-            # image2, mask2 = random_crop(image, mask, crop_size, size)
-            # image3, mask3 = horizontal_flip(image, mask, size)
-            # image4, mask4 = vertical_flip(image, mask, size)
-            # image5, mask5 = scale_augmentation(image, mask, (512, 768), crop_size, size)
-            # image6, mask6 = random_rotation(image, mask, size)
-            # image7, mask7 = cutout(image, mask, 256)
-            # ## Extra Cropping
-            # image8, mask8 = random_crop(image, mask, crop_size, size)
-            # image9, mask9 = random_crop(image, mask, crop_size, size)
-            # ## Extra Scale Augmentation
-            # image10, mask10 = scale_augmentation(image, mask, (540, 820), crop_size, size)
-            # image11, mask11 = scale_augmentation(image, mask, (720, 1024), crop_size, size)
-            # ## Extra Rotation
-            # image12, mask12 = random_rotation(image, mask, size)
-            # image13, mask13 = random_rotation(image, mask, size)
-            # ## Brightness
-            # image14, mask14 = brightness_augment(image, mask, factor=0.3)
-            # image15, mask15 = brightness_augment(image, mask, factor=0.6)
-            # image16, mask16 = brightness_augment(image, mask, factor=0.9)
-            # ## More Rotation
-            # image17, mask17 = random_rotation(image, mask, size)
-            # image18, mask18 = random_rotation(image, mask, size)
-            # ## More Random Crop
-            # image19, mask19 = random_crop(image, mask, crop_size, size)
-            # image20, mask20 = random_crop(image, mask, crop_size, size)
-            # ## More Cutout
-            # image21, mask21 = cutout(image, mask, 256)
-            # image22, mask22 = cutout(image, mask, 256)
-            # ## Grayscale
-            # image23, mask23 = rgb_to_grayscale(image, mask)
-            # image24, mask24 = rgb_to_grayscale(image1, mask1)
-            # image25, mask25 = rgb_to_grayscale(image2, mask2)
-            # image26, mask26 = rgb_to_grayscale(image3, mask3)
-            # image27, mask27 = rgb_to_grayscale(image4, mask4)
-            # image28, mask28 = rgb_to_grayscale(image5, mask5)
-            # image29, mask29 = rgb_to_grayscale(image15, mask15)
-            # image30, mask30 = rgb_to_grayscale(image16, mask16)
+            # # Augment
+            image1, mask1 = center_crop(image, mask, crop_size, size)
+            image2, mask2 = random_crop(image, mask, crop_size, size)
+            image3, mask3 = horizontal_flip(image, mask, size)
+            image4, mask4 = vertical_flip(image, mask, size)
+            image5, mask5 = scale_augmentation(image, mask, (512, 768), crop_size, size)
+            image6, mask6 = random_rotation(image, mask, size)
+            image7, mask7 = cutout(image, mask, 256)
+            ## Extra Cropping
+            image8, mask8 = random_crop(image, mask, crop_size, size)
+            image9, mask9 = random_crop(image, mask, crop_size, size)
+            ## Extra Scale Augmentation
+            image10, mask10 = scale_augmentation(image, mask, (540, 820), crop_size, size)
+            image11, mask11 = scale_augmentation(image, mask, (720, 1024), crop_size, size)
+            ## Extra Rotation
+            image12, mask12 = random_rotation(image, mask, size)
+            image13, mask13 = random_rotation(image, mask, size)
+            ## Brightness
+            image14, mask14 = brightness_augment(image, mask, factor=0.3)
+            image15, mask15 = brightness_augment(image, mask, factor=0.6)
+            image16, mask16 = brightness_augment(image, mask, factor=0.9)
+            ## More Rotation
+            image17, mask17 = random_rotation(image, mask, size)
+            image18, mask18 = random_rotation(image, mask, size)
+            ## More Random Crop
+            image19, mask19 = random_crop(image, mask, crop_size, size)
+            image20, mask20 = random_crop(image, mask, crop_size, size)
+            ## More Cutout
+            image21, mask21 = cutout(image, mask, 256)
+            image22, mask22 = cutout(image, mask, 256)
+            ## Grayscale
+            image23, mask23 = rgb_to_grayscale(image, mask)
+            image24, mask24 = rgb_to_grayscale(image1, mask1)
+            image25, mask25 = rgb_to_grayscale(image2, mask2)
+            image26, mask26 = rgb_to_grayscale(image3, mask3)
+            image27, mask27 = rgb_to_grayscale(image4, mask4)
+            image28, mask28 = rgb_to_grayscale(image5, mask5)
+            image29, mask29 = rgb_to_grayscale(image15, mask15)
+            image30, mask30 = rgb_to_grayscale(image16, mask16)
 
-            # ## Original image and mask
-            # image = resize(image, size)
-            # mask = resize(mask, size)
+            ## Original image and mask
+            image = resize(image, size)
+            mask = resize(mask, size)
 
-            # ## All images and masks
-            # all_images = [image, image1, image2, image3, image4, image5, image6, image7,
-            #     image8, image9, image10, image11, image12, image13, image14, image15, image16,
-            #     image17, image18, image19, image20, image21, image22,
-            #     image23,image24, image25, image26, image27, image28, image29, image30
-            #     ]
-            # all_masks  = [mask, mask1, mask2, mask3, mask4, mask5, mask6, mask7, mask8,
-            #     mask9, mask10, mask11, mask12, mask13, mask14, mask15, mask16,
-            #     mask17, mask18, mask19, mask20, mask21, mask22,
-            #     mask23, mask24, mask25, mask26, mask27, mask28, mask29, mask30
-            #     ]
+            ## All images and masks
+            all_images = [image, image1, image2, image3, image4, image5, image6, image7,
+                image8, image9, image10, image11, image12, image13, image14, image15, image16,
+                image17, image18, image19, image20, image21, image22,
+                image23,image24, image25, image26, image27, image28, image29, image30
+                ]
+            all_masks  = [mask, mask1, mask2, mask3, mask4, mask5, mask6, mask7, mask8,
+                mask9, mask10, mask11, mask12, mask13, mask14, mask15, mask16,
+                mask17, mask18, mask19, mask20, mask21, mask22,
+                mask23, mask24, mask25, mask26, mask27, mask28, mask29, mask30
+                ]
 
             ## Save the images and masks
             new_image_path = os.path.join(new_full_path, "train", "images/")
             new_mask_path = os.path.join(new_full_path, "train", "masks/")
 
-            image = resize(image, size)
-            mask = resize(mask, size)
+            # image = resize(image, size)
+            # mask = resize(mask, size)
 
-            img_path = new_image_path + str(name) + ".jpg"
-            mask_path = new_mask_path + str(name) + ".jpg"
-            tmp_path = [img_path, mask_path]
-            save_image(image, mask, tmp_path)
+            # img_path = new_image_path + str(name) + ".jpg"
+            # mask_path = new_mask_path + str(name) + ".jpg"
+            # tmp_path = [img_path, mask_path]
+            # save_image(image, mask, tmp_path)
 
-            # for j in range(len(all_images)):
-            #     img_path = new_image_path + str(name) + "_" + str(j) + ".jpg"
-            #     msk_path = new_mask_path + str(name) + "_" + str(j) + ".jpg"
+            for j in range(len(all_images)):
+                img_path = new_image_path + str(name) + "_" + str(j) + ".jpg"
+                msk_path = new_mask_path + str(name) + "_" + str(j) + ".jpg"
 
-            #     img = all_images[j]
-            #     msk = all_masks[j]
-            #     path = [img_path, msk_path]
+                img = all_images[j]
+                msk = all_masks[j]
+                path = [img_path, msk_path]
 
-            #     save_image(img, msk, path)
+                save_image(img, msk, path)
