@@ -205,6 +205,9 @@ class RandomRotation:
 def denormalization(data, mean, std):
     return (data * std) + mean
 
+def to_numpy(tensor):
+    return tensor.to('cpu').detach().numpy().transpose(1, 2, 0)  # (Batch, H, W, C)
+
 # class BrightnessAugment:
 #     def __init__(self, factor_range=(0.3, 0.9), size=(256, 256)):
 #         self.factor_range = factor_range

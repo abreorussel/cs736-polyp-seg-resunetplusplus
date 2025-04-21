@@ -34,3 +34,4 @@ idea/*
 /road_segmentation_ideal
 /hparams.py
 *.jpg
+*.png
