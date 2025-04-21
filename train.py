@@ -49,7 +49,7 @@ def main(hp, num_epochs, resume, name, device='cpu'):
         model = ResUnetPlusPlus(3).to(device)
         print("Loading RESUNET++ model !!!!!!!!!!!\n")
     else:
-        model = ResUnet(3, 64).to(device)
+        model = ResUnet(3).to(device)
 
     # set up binary cross entropy and dice loss
     criterion = metrics.BCEDiceLoss()
