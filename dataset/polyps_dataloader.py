@@ -23,23 +23,24 @@ class PolypsDataset(Dataset):
         return len(self.masks)
 
     def __getitem__(self, idx):
-        # print(self.imgs[idx])
-        # image = cv2.imread(self.imgs[idx], cv2.IMREAD_COLOR)
-        # mask = cv2.imread(self.masks[idx], cv2.IMREAD_GRAYSCALE)
 
-        # sample = {
-        #     "image" : image,
-        #     "mask" : mask
-        # }
-
+        # for resunet and resunte++
         image = cv2.imread(self.imgs[idx], cv2.IMREAD_COLOR)
+        # image = cv2.imread(self.imgs[idx], cv2.IMREAD_GRAYSCALE) / 255.
         mask = cv2.imread(self.masks[idx], cv2.IMREAD_GRAYSCALE) / 255.
         
+        # for resunet and resunte++
         sample = {
             'image': image,
             'mask': mask[:, :, np.newaxis],
         }
+        # sample = {
+        #     'image': image[:, :, np.newaxis],
+        #     'mask': mask[:, :, np.newaxis],
+        # }
         
+
+
         if self.transform is not None:
             sample = self.transform(sample)
 
@@ -106,6 +107,24 @@ class ToTensor:
             'mask': torch.from_numpy(mask),
         }
         return sample
+    
+
+class GrayscaleNormalizationSI:
+    def __init__(self, mean=0.5, std=0.5):
+        self.mean = mean
+        self.std = std
+        
+    def __call__(self, image):
+        image = (image - self.mean) / self.std
+        return image
+    
+
+class ToTensorSI:
+    def __call__(self, image):
+
+        image = image.transpose(2, 0, 1).astype(np.float32) 
+
+        return image
     
 class RandomFlip:
     def __call__(self, data):
