@@ -1,8 +1,15 @@
 # Polyp Segmentation 
 Team Members
-* Russel Abreo
-* Atharv Shingewar
+* Russel Abreo 24M2107
+* Atharv Shingewar 24M2108
 
+
+### Requirements
+```
+# Install Packages
+pip install -r requirements.txt
+pip install matplotlib
+```
 
 <!-- Unofficial Pytorch implementation of following papers :
 * [Deep ResUnet](https://arxiv.org/pdf/1711.10684.pdf)
