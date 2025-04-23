@@ -1,7 +1,7 @@
 # Polyp Segmentation 
 Team Members
-* Russel Abreo 24M2107
-* Atharv Shingewar 24M2108
+* Russel Abreo : 24M2107
+* Atharv Shingewar : 24M2108
 
 
 ### Requirements
@@ -13,7 +13,7 @@ pip install -r requirements.txt
 ### Dataset
 The model is trained on Kvasir-SEG polyps dataset. OOD testing is done on CVC-ClinicDB
 You can download the Kvasir-SEG dataset at https://datasets.simula.no/kvasir-seg/ and the CVC-Clinic dataset
-at 
+at https://www.kaggle.com/datasets/balraj98/cvcclinicdb?select=PNG
 
 ### Preprocessing the dataset
 
