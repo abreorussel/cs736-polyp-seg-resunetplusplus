@@ -40,7 +40,7 @@ model.to(device)
 cam = ScoreCAM(model=model, target_layers=[target_layer])
 
 # img_path = 'new_data/Kvasir-SEG/test/images/cju1bm8063nmh07996rsjjemq.jpg'  #perfect
-# img_path = 'new_data/Kvasir-SEG/test/images/cju1c4fcu40hl07992b8gj0c8.jpg'   ok
+# img_path = 'new_data/Kvasir-SEG/test/images/cju1c4fcu40hl07992b8gj0c8.jpg'   #ok
 # img_path = 'new_data/Kvasir-SEG/test/images/cju1cbokpuiw70988j4lq1fpi.jpg'   #perfect
 # img_path = 'new_data/Kvasir-SEG/test/images/cju1cdxvz48hw0801i0fjwcnk.jpg'
 # img_path = 'new_data/Kvasir-SEG/test/images/cju1cnnziug1l0835yh4ropyg.jpg'  #perfect
@@ -62,4 +62,3 @@ grayscale_cam = cam(input_tensor=torch.from_numpy(transformed_img).unsqueeze(0).
 visualization = show_cam_on_image(orig_rgb, grayscale_cam, use_rgb=True)
 
 cv2.imwrite('scorecam_overlay.png', cv2.cvtColor(visualization, cv2.COLOR_RGB2BGR))
-print('ScoreCAM overlay saved to scorecam_overlay.png')

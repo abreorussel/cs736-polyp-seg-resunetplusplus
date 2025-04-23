@@ -26,7 +26,25 @@ class BCEDiceLoss(nn.Module):
         )
 
         return bce_loss + (1 - dice_coef)
+    
+class BCEDiceLossWithLogits(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super().__init__()
 
+    def forward(self, input, target):
+      pred = torch.sigmoid(input).reshape(-1)  # convert logits to probabilities
+      truth = target.reshape(-1)
+
+      # BCE loss with logits (more stable)
+      bce_loss = nn.BCEWithLogitsLoss()(input.reshape(-1), truth).double()
+
+      # Dice coefficient on probabilities
+      dice_coef = (2.0 * (pred * truth).double().sum() + 1) / (
+          pred.double().sum() + truth.double().sum() + 1
+      )
+
+      return bce_loss + ( 1 - dice_coef)
+    
 
 # https://github.com/pytorch/examples/blob/master/imagenet/main.py
 class MetricTracker(object):

@@ -38,45 +38,12 @@ class PolypsDataset(Dataset):
         #     'image': image[:, :, np.newaxis],
         #     'mask': mask[:, :, np.newaxis],
         # }
-        
-
-
         if self.transform is not None:
             sample = self.transform(sample)
 
         # print(f"POLYPS DATASET : IMAGE : {sample['image'].shape}  ,   MASK : {sample['mask'].shape}")
         return sample
-        
 
-class JointTrTransform:
-    def __init__(self, train=True):
-        # define the *geometric* transforms you want to apply to both
-        if train:
-            self.transform = v2.Compose([
-                # v2.ToImage(),
-                v2.RandomResizedCrop(size=(256,256), scale=(0.8, 1.0)),
-                v2.RandomHorizontalFlip(p=0.5),
-                v2.RandomVerticalFlip(p=0.5),
-                v2.ToDtype(torch.float32, scale=True),
-            ])
-        else:
-            self.transform = v2.Compose([
-                v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.ToDtype(torch.float32, scale=True),
-            ])
-
-        self.image_only = v2.Compose([
-            v2.ToImage(),
-            v2.Normalize([0.5], [0.5])
-        ])
-
-    def __call__(self, sample):
-        img, mask = sample["image"], sample["mask"]
-        img = self.image_only(img)
-        img = self.transform(img)
-        mask = self.transform(mask)
-        return {"image": img, "mask": mask}
 
 class GrayscaleNormalization:
     def __init__(self, mean=0.5, std=0.5):
@@ -156,8 +123,6 @@ class Resize:
             "image" : image,
             "mask" : mask
         }
-        # print("RESIZE")
-        # print(sample['mask'].shape)
         return sample
 
 class RandomCrop:
@@ -219,26 +184,8 @@ class RandomRotation:
         }
         return sample
 
-
-
 def denormalization(data, mean, std):
     return (data * std) + mean
 
 def to_numpy(tensor):
     return tensor.to('cpu').detach().numpy().transpose(1, 2, 0)  # (Batch, H, W, C)
-
-# class BrightnessAugment:
-#     def __init__(self, factor_range=(0.3, 0.9), size=(256, 256)):
-#         self.factor_range = factor_range
-#         self.size = size
-
-#     def __call__(self, data):
-#         image, mask = data["image"], data["mask"]
-#         factor = random.uniform(*self.factor_range)
-#         image, mask =  brightness_augment(image, mask, factor)
-#         sample = {
-#             "image" : image,
-#             "mask" : mask
-#         }
-#         return sample    
-     

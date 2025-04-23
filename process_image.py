@@ -207,8 +207,8 @@ if __name__ == '__main__':
 
     len_ids = len(images)
     train_size = int((80/100)*len_ids)
-    valid_size = int((10/100)*len_ids)		## Here 10 is the percent of images used for validation
-    test_size = int((10/100)*len_ids)		## Here 10 is the percent of images used for testing
+    valid_size = int((10/100)*len_ids)		
+    test_size = int((10/100)*len_ids)		
 
     train_images, test_images = train_test_split(images, test_size=test_size, random_state=42)
     train_masks, test_masks = train_test_split(masks, test_size=test_size, random_state=42)
