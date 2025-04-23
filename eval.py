@@ -21,6 +21,43 @@ TEST_IMGS_DIR = os.path.join(TEST_DIR, 'images')
 TEST_LABELS_DIR = os.path.join(TEST_DIR, 'masks')
 
 
+def construct_overlay_image(original_img, segmented_img, gt_img , crt_id, results_dir):
+
+    # Ensure the original image is in RGB format (OpenCV loads as BGR by default)
+    original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
+
+    # Define colors for overlay
+    # Considereing RGB
+    prediction_color = [58, 140, 255]  # Blue 
+    gt_color = [47, 237, 57]  # Green  
+    intersection_color = [236, 255, 88]  # Yellow 
+
+    # Create empty colored masks
+    colored_prediction = np.zeros_like(original_img)
+    colored_gt = np.zeros_like(original_img)
+    colored_intersection = np.zeros_like(original_img)
+
+    # Create masks for prediction, ground truth, and their intersection
+    prediction_mask = segmented_img == 255
+    gt_mask = gt_img == 255
+    intersection_mask = np.logical_and(prediction_mask, gt_mask)
+
+    # Apply colors to each region
+    colored_prediction[prediction_mask] = prediction_color  # Red for prediction
+    colored_gt[gt_mask] = gt_color  # Yellow for ground truth
+    colored_intersection[intersection_mask] = intersection_color  # Green for intersection
+
+    # Copy the original image and overlay the colored masks
+    overlay_img = original_img.copy()
+
+    # Blend the original image with the predicted and ground truth masks
+    overlay_img[prediction_mask] = cv2.addWeighted(original_img[prediction_mask], 0.6, colored_prediction[prediction_mask], 0.6, 0)
+    overlay_img[gt_mask] = cv2.addWeighted(original_img[gt_mask], 0.6, colored_gt[gt_mask], 0.6, 0)
+    overlay_img[intersection_mask] = cv2.addWeighted(original_img[intersection_mask], 0.6, colored_intersection[intersection_mask], 0.6, 0)
+
+    # Save the resulting overlay image
+    cv2.imwrite(os.path.join(results_dir, f'overlay_{crt_id}.png'), cv2.cvtColor(overlay_img, cv2.COLOR_RGB2BGR))
+
 def evaluate(model, test_loader, device, result_folder):
     """
     Evaluates the model on the test dataset. Computes dice coefficient,
@@ -42,21 +79,15 @@ def evaluate(model, test_loader, device, result_folder):
             inputs = data["image"].to(device)  # shape: [B, C, H, W]
             labels = data["mask"].to(device)     # shape: [B, 1, H, W]
 
-            # Forward pass (apply sigmoid to get probability between 0 and 1)
             outputs = model(inputs)
             outputs = torch.sigmoid(outputs)
 
-            # Binarize predictions with threshold=0.5
             preds = (outputs > 0.6).float()
-
-            # Update dice coefficient (using your metrics function)
-            # Here we assume metrics.dice_coeff accepts (prediction, ground_truth)
 
             # preds has a shape of : [8, 1, 256, 256]
             dice = metrics.dice_coeff(preds, labels)
-            # print(f"PREDS : {preds.shape}")
             hd95 = metrics.hd95_batch(preds, labels)
-            # Multiply by batch size to later compute the average
+
             dice_sum += dice * inputs.size(0)
             hd95_sum += hd95 * inputs.size(0)
             num_samples += inputs.size(0)
@@ -67,6 +98,7 @@ def evaluate(model, test_loader, device, result_folder):
 
             # Save results: for each sample, create a combined image:
             for i in range(inputs.size(0)):
+                # crt_id = int(test_batch_num * (batch_idx - 1) + j)
                 # Bring tensor to cpu and convert to numpy array
                 # input_np = inputs[i].cpu().numpy()         # [C, H, W]
                 label_np = labels[i].cpu().numpy()           # [1, H, W]
@@ -89,6 +121,9 @@ def evaluate(model, test_loader, device, result_folder):
                 # Define unique output filename
                 out_filename = os.path.join(result_folder, f"sample_{batch_idx * inputs.size(0) + i}.png")
                 cv2.imwrite(out_filename, combined)
+                
+                # print(f"INPUT : {input_img.shape}\nSEGMENTED : {pred_img.shape}\nGT : {label_img.shape}")
+                construct_overlay_image(original_img=input_img, segmented_img=pred_img, gt_img=label_img, crt_id=f"{batch_idx}_{i}", results_dir=result_folder)
 
     avg_dice = dice_sum / num_samples
     avg_hd95 = hd95_sum / num_samples
@@ -101,7 +136,7 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluation for Polyp Segmentation")
     parser.add_argument('-c', '--config', type=str, required=True, help="Path to YAML config file")
     parser.add_argument('-m', '--model', type=str, required=True, help="Path to model checkpoint")
-    parser.add_argument('-o', '--output', type=str, default="results_resunet", help="Folder to store result images")
+    parser.add_argument('-o', '--output', type=str, default="results_resunetpp", help="Folder to store result images")
     parser.add_argument('--device', type=str, default="cuda:3" if torch.cuda.is_available() else "cpu", help="Computation device")
     args = parser.parse_args()
 
@@ -136,6 +171,9 @@ def main():
     # Create test dataset and dataloader
     test_dataset = PolypsDataset(TEST_IMGS_DIR, TEST_LABELS_DIR, transform=test_transform)
     test_loader = DataLoader(test_dataset, batch_size=hp.batch_size, num_workers=2, shuffle=False)
+
+    test_data_num = len(test_dataset)
+    test_batch_num = int(np.ceil(test_data_num / hp.batch_size))
 
     # Evaluate the model on test data
     avg_dice, avg_hd95, accuracy = evaluate(model, test_loader, device, args.output)
